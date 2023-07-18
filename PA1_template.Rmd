@@ -1,25 +1,61 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+#Introduction
 
+# Collecting data from personal activity monitoring devices
+# The data includes steps taken in 5-minute intervals each day
+# The objective is to analyze and process the data
 
-## Loading and preprocessing the data
+# 1. Code for reading in the dataset and/or processing the data
+# Loading required packages
+library(lubridate)
+library(dplyr)
 
+# Reading the dataset
+act <- read.csv("activity.csv")
 
+# Converting date variable to a suitable format
+act$date <- ymd(act$date)
 
-## What is mean total number of steps taken per day?
+# 2. Histogram of the total number of steps taken each day
+tot.steps.day <- aggregate(steps ~ date, data = act, sum, na.rm = TRUE)
+hist(tot.steps.day$steps, main = "Histogram of total number of steps taken each day", xlab = "Total Steps By Day")
 
+# 3. Mean and median number of steps taken each day
+mean.steps <- mean(tot.steps.day$steps)
+median.steps <- median(tot.steps.day$steps)
+summary <- data.frame(mean = mean.steps, median = median.steps)
+summary
 
+# 4. Time series plot of the average number of steps taken
+average.steps.inter <- aggregate(steps ~ interval, data = act, mean, na.rm = TRUE)
+plot(average.steps.inter$interval, average.steps.inter$steps, type = "l", xlab = "Intervals", ylab = "Average Steps", main = "Time Series Plot of Average Steps Taken")
 
-## What is the average daily activity pattern?
+# 5. The 5-minute interval that, on average, contains the maximum number of steps
+max.average.steps.inter <- average.steps.inter[order(average.steps.inter$steps, decreasing = TRUE), ]
+max.num <- max.average.steps.inter[1, 1]
 
+# 6. Code to describe and show a strategy for imputing missing data
+na.perc <- mean(is.na(act$steps)) * 100
+act.imp <- act %>% group_by(interval) %>% mutate(steps = ifelse(is.na(steps), mean(steps, na.rm = TRUE), steps))
 
+# 7. Histogram of the total number of steps taken each day after missing values are imputed
+imp.tot.steps.day <- aggregate(steps ~ date, data = act.imp, sum, na.rm = TRUE)
+hist(imp.tot.steps.day$steps, main = "Histogram of total number of steps taken each day (Imputed Data)")
 
-## Imputing missing values
+# Mean and median of imputed data
+imp.mean.steps <- mean(imp.tot.steps.day$steps)
+imp.median.steps <- median(imp.tot.steps.day$steps)
+imp.summary <- data.frame(mean = imp.mean.steps, median = imp.median.steps)
+imp.summary
 
+# 8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+act.imp$day <- weekdays(act.imp$date)
+act.imp$day.type <- ifelse(act.imp$day %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
+act.imp$day.type <- factor(act.imp$day.type)
 
+par(mfrow = c(2, 1))
+for (type in c("Weekend", "Weekday")) {
+  steps.type <- aggregate(steps ~ interval, data = act.imp, subset = act.imp$day.type == type, FUN = mean)
+  plot(steps.type, type = "l", main = type)
+}
 
-## Are there differences in activity patterns between weekdays and weekends?
+sessionInfo()
